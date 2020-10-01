@@ -1,0 +1,77 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using System;
+
+public class GPSTest : MonoBehaviour
+{
+    public static GPSTest Instance { set; get; }
+
+    //   public static float lat;
+    //   public static float longi;
+    bool GPSworking = false;
+    public float latitude;
+    public float longitude;
+
+    private void Update()
+    {
+        Instance = this;
+        DontDestroyOnLoad(gameObject);
+        StartCoroutine(StartLocationService());
+
+        if (GPSworking)
+        {
+            longitude = Input.location.lastData.longitude;
+            latitude = Input.location.lastData.latitude;
+        }
+    }
+
+   // private void Update()
+   // {
+    //    if(GPSworking)
+    //    {
+    //        longitude = Input.location.lastData.longitude;
+    //        latitude = Input.location.lastData.latitude;
+    //    }
+   // }
+    public void UIStarter()
+    {
+        StartCoroutine(StartLocationService());
+    }
+        //public
+    IEnumerator StartLocationService()
+    {
+        if (!Input.location.isEnabledByUser)
+        {
+            Debug.Log("User has not enabled GPS");
+            yield break;
+        }
+            Input.location.Start(5);
+   //     Input.location.Start();
+        int maxWait = 20;
+        while (Input.location.status == LocationServiceStatus.Initializing && maxWait > 0)
+        {
+            yield return new WaitForSeconds(1);
+            maxWait--;
+        }
+       // if (maxWait <= 0)
+        if(maxWait < 1)
+        {
+            Debug.Log("Timed out");
+            yield break;
+        }
+        if (Input.location.status == LocationServiceStatus.Failed)
+        {
+            Debug.Log("Unable to determine device location");
+            yield break;
+        }
+        else
+        {
+            GPSworking = true;
+            yield break;
+            //   longitude = Input.location.lastData.longitude;
+            //  latitude = Input.location.lastData.latitude;
+            //   print(lat + longi);
+        }
+    }
+}
