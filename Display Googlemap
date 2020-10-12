@@ -18,45 +18,44 @@ public class GoogleMaps : MonoBehaviour
     public bool autoLocateCenter = true;
     //center loc split into 3 parts below
     public GoogleMapLocation centerLocation;
-    public int zoom = 14;
+    public int zoom = 16;
     public MapType mapType;
     public int size = 512;
-    public float sizeDelta = -1;
+//    public float sizeDelta = -1;
     public bool doubleResolution = false;
     public GoogleMapMarker[] markers;
-
-    public GameObject WhereAmI;
- //   Vector2 RCurrentPos;
-    //new add
-    //   private float proximity;
-    //   private Vector2 targetCoordinates;
-    //   public float dLatitude = 52.5016f, dLongitude = 13.44342f;
-       private float getLat;
-       private float getLong;
-       Vector2 RCurrentPos;
+    private float getLat;
+    private float getLong;
 
     void Start()
     {
-        //new add
-        getLat = GPSTest.Instance.latitude;
-        getLong = GPSTest.Instance.longitude;
+        Refresh();
+    }
 
- //       if (loadOnStart)
-             Refresh();      //new add below
-     //   targetCoordinates = new Vector2(dLatitude, dLongitude);
+    private void Update()
+    {
+        getLat = GPSLocation.Instance.latitude;
+        getLong = GPSLocation.Instance.longitude;
+    }
+
+    bool GPSCoordinates()
+    {
+        if (getLat != 0 && getLong != 0)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 
     public void Refresh()
     {
-        //new add
-    //    getLat = GPSscript.lat;
-    //    getLong = GPSscript.longi;
-
         if (autoLocateCenter && (markers.Length == 0))
         {
             Debug.LogError("Auto Center will only work if paths or markers are used.");
         }
-
         StartCoroutine(_Refresh());
     }
 
@@ -69,14 +68,10 @@ public class GoogleMaps : MonoBehaviour
             if (centerLocation.address != "")
                 qs += "center=" + UnityWebRequest.UnEscapeURL(centerLocation.address);
             else
-                //        qs += "center=" + UnityWebRequest.UnEscapeURL(string.Format("{0},{1}", centerLocation.latitude, centerLocation.longitude));
-                //new add
-                qs += "center=" + UnityWebRequest.UnEscapeURL(string.Format("{0},{1}", GPSTest.Instance.latitude.ToString(), GPSTest.Instance.longitude.ToString()));
+                yield return new WaitUntil(GPSCoordinates);
+            qs += "center=" + UnityWebRequest.UnEscapeURL(string.Format("{0},{1}", getLat, getLong));
 
             qs += "&zoom=" + zoom.ToString();
-         //   WhereAmI.transform.position = UnityWebRequest.UnEscapeURL(string.Format("{0},{1}", getLong, getLat));
-
-            //new Vector2(getLong, getLat); qs += "center=" + UnityWebRequest.UnEscapeURL(string.Format("{0},{1}", GPSTest.Instance.latitude.ToString(), GPSTest.Instance.longitude.ToString()));
 
         }
         qs += "&size=" + UnityWebRequest.UnEscapeURL(string.Format("{0}x{0}", size));
@@ -86,13 +81,7 @@ public class GoogleMaps : MonoBehaviour
 
         usingSensor = Input.location.isEnabledByUser && Input.location.status == LocationServiceStatus.Running;
 
-
         qs += "&sensor=" + (usingSensor ? "true" : "false");
-
-     //   WhereAmI.transform.position = new Vector2(getLong, getLat);
-
-        //qs += "center=" + UnityWebRequest.UnEscapeURL(string.Format("{0},{1}", getLat, getLong));
-        //    Vector2 xy_vector = Quaternion.AngleAxis(getLong, -Vector2.up) * Quaternion.AngleAxis(getLat, -Vector2.right) * new Vector2(0, 0);
 
         foreach (var i in markers)
         {
@@ -104,10 +93,11 @@ public class GoogleMaps : MonoBehaviour
                     qs += "|" + UnityWebRequest.UnEscapeURL(loc.address);
                 else
                            qs += "|" + UnityWebRequest.UnEscapeURL(string.Format("{0},{1}", loc.latitude, loc.longitude));
-                    //new add
-                  //  qs += "|" + UnityWebRequest.UnEscapeURL(string.Format("{0},{1}", getLat.ToString(), getLong.ToString()));
             }
         }
+        //my location!
+        qs += "&markers=" + string.Format("size:{0}|color:{1}|label:{2}", "Mid", "red", "Current Location");
+        qs += "|" + UnityWebRequest.UnEscapeURL(string.Format("{0},{1}", getLat, getLong));
 
         qs += "&key=" + UnityWebRequest.UnEscapeURL(GoogleApiKey);
         string requestUrl = url + "?" + qs;
@@ -119,29 +109,18 @@ public class GoogleMaps : MonoBehaviour
         {
             Debug.Log(request.error);
         }
- //   }
- //   void SetLocation(float latitude, float longitude)
- //  {
- //      RCurrentPos = new Vector2(latitude, longitude);
- //      proximity = Vector2.Distance(targetCoordinates, RCurrentPos);
- //  }
 
         else
               {
                   Texture2D texture = DownloadHandlerTexture.GetContent(request);
-    //    Set the renderer to display newly downloaded texture
+             //    Set the renderer to display newly downloaded texture
                  SpriteRenderer spriteRenderer = GetComponent<SpriteRenderer>();
                 spriteRenderer.sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.width), new Vector2(0.5f, 0.5f));
                  spriteRenderer.material.mainTexture = texture;
                     spriteRenderer.material.shader = Shader.Find("Sprites/Default");
-   //     Set the camera to fith width-wise with the texture
+             //     Set the camera to fith width-wise with the texture
                   Camera.main.orthographicSize = ((texture.width / ((float)spriteRenderer.sprite.pixelsPerUnit)) / 2) / (Screen.width / ((float)Screen.height));
              }
-    }
-    void SetLocation(float getLat, float getLong)
-    {
-        RCurrentPos = new Vector2(getLat, getLong);
-        WhereAmI.transform.position = RCurrentPos;
     }
 }
 
@@ -152,6 +131,7 @@ public enum GoogleMapColor
     blue,
     gray,
     red,
+    green
 }
 
 [System.Serializable]
